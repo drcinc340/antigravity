@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Antigravity</title>
+  
+  <!-- Apple macOS Dock & iOS Web App Meta -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Antigravity">
+  <meta name="theme-color" content="#070a13">
+
+  <!-- Icons & Manifest (relative paths support both / and /antigravity/) -->
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="./icons/icon-192.png">
+  <link rel="manifest" href="./manifest.json">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="./styles.css">
+
+  <!-- Markdown & Code Highlight Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-logo">
+          <div class="orb-pulsing" id="connectionOrb"></div>
+          <span class="brand-title">Antigravity</span>
+          <span class="conn-mode-badge desktop-only" id="connModeBadge">Live</span>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <button class="convo-selector-btn" id="convoDropdownBtn" title="Switch Conversation">
+          <span id="headerConvoTitle">Select Conversation</span>
+          <svg class="chevron-icon mobile-only" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+      </div>
+
+      <div class="header-right">
+        <!-- Desktop Inspector Controls (MacBook / Wide Screens) -->
+        <div class="desktop-toolbar desktop-only">
+          <button class="toolbar-chip" id="toggleArtifactsDrawerBtn" data-inspector="artifactsView" title="Toggle Artifacts &amp; Plans">
+            <span>📄 Artifacts</span>
+            <span class="chip-count" id="desktopArtifactsCount">0</span>
+          </button>
+          <button class="toolbar-chip" id="toggleSystemDrawerBtn" data-inspector="systemView" title="Toggle Workstation &amp; Shell">
+            <span>⚡ Workstation</span>
+          </button>
+          <button class="toolbar-primary-btn" id="desktopNewConvoBtn" title="New Task (Option+N)">
+            <span>＋ New Task</span>
+          </button>
+        </div>
+
+        <!-- Mobile New Task Button -->
+        <button class="icon-btn mobile-only" id="newConvoBtn" title="New Task">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Views Container (3-Pane Workspace on MacBook, Tabbed Views on iPhone) -->
+    <main class="main-content" id="mainWorkspace">
+      <!-- 1. CONVERSATIONS SIDEBAR / HISTORY VIEW -->
+      <section id="historyView" class="tab-pane sidebar-pane">
+        <div class="pane-header">
+          <h2>Conversations</h2>
+          <span class="count-badge" id="convosCount">0</span>
+        </div>
+        <div class="search-bar">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="searchConvosInput" placeholder="Search conversations...">
+          <kbd class="kbd-hint desktop-only">&#8984;K</kbd>
+        </div>
+        <div id="convosList" class="convos-list">
+          <!-- Loaded dynamically -->
+        </div>
+      </section>
+
+      <!-- 2. CENTER CHAT CANVAS -->
+      <section id="chatView" class="tab-pane active chat-pane">
+        <div id="chatMessages" class="chat-messages">
+          <!-- Empty State -->
+          <div id="emptyState" class="empty-state">
+            <div class="empty-orb">✨</div>
+            <h3 id="emptyStateHeading">Antigravity Remote</h3>
+            <p>Direct agentic pair programmer connected to your Windows workstation.</p>
+            <div class="quick-prompts">
+              <button class="quick-prompt-btn" data-prompt="What tasks or projects are currently active?">📋 Check active projects</button>
+              <button class="quick-prompt-btn" data-prompt="Run git status and show recent changes">🔍 Check git status</button>
+              <button class="quick-prompt-btn" data-prompt="Summarize system health and running background services">⚡ System health check</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div class="chat-input-wrapper">
+          <div class="composer-inner">
+            <!-- Slash Commands Quick Bar -->
+            <div id="slashBar" class="slash-bar hidden">
+              <button class="slash-tag" data-cmd="/goal">/goal (Persistent)</button>
+              <button class="slash-tag" data-cmd="/schedule">/schedule (Cron/Timer)</button>
+              <button class="slash-tag" data-cmd="/boost">/boost (Deep Think)</button>
+              <button class="slash-tag" data-cmd="/plan">/plan (Step-by-Step)</button>
+              <button class="slash-tag" data-cmd="/grill-me">/grill-me (Align Plan)</button>
+            </div>
+
+            <div class="chat-input-container">
+              <button class="action-mini-btn" id="slashToggleBtn" title="Slash Commands">
+                <span>/</span>
+              </button>
+              
+              <textarea id="promptInput" rows="1" placeholder="Instruct Antigravity..." autocomplete="off"></textarea>
+
+              <button class="action-mini-btn" id="micBtn" title="Voice Dictation">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+              </button>
+
+              <button class="send-btn" id="sendBtn" title="Send Message (Enter)">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+              </button>
+            </div>
+
+            <div class="composer-hint desktop-only">
+              <span><kbd>Enter</kbd> Send &middot; <kbd>Shift+Enter</kbd> New line &middot; <kbd>&#8984;K</kbd> Search &middot; <kbd>&#8997;N</kbd> New task</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. ARTIFACTS & FILES VIEW (Right Inspector on MacBook / Tab on iPhone) -->
+      <section id="artifactsView" class="tab-pane inspector-pane">
+        <div class="pane-header">
+          <h2>Artifacts &amp; Plans</h2>
+          <button class="close-inspector-btn desktop-only" data-close-inspector title="Close Panel">&times;</button>
+        </div>
+        <div id="artifactsList" class="artifacts-list">
+          <p class="empty-hint">Select a conversation with artifacts to view implementation plans, walkthroughs, and files.</p>
+        </div>
+      </section>
+
+      <!-- 4. SYSTEM & TOOLS VIEW (Right Inspector on MacBook / Tab on iPhone) -->
+      <section id="systemView" class="tab-pane inspector-pane">
+        <div class="pane-header">
+          <h2>Workstation &amp; Shell</h2>
+          <button class="close-inspector-btn desktop-only" data-close-inspector title="Close Panel">&times;</button>
+        </div>
+        <div class="system-cards">
+          <!-- System Status Card -->
+          <div class="card">
+            <div class="card-title">🖥️ Workstation Status</div>
+            <div class="stat-row">
+              <span class="label">Permanent Link:</span>
+              <span class="val highlight" id="statPortalUrl">https://drcinc340.github.io/antigravity/</span>
+            </div>
+            <div class="stat-row">
+              <span class="label">Home Wi-Fi:</span>
+              <span class="val" id="statLocalIp">-</span>
+            </div>
+            <div class="stat-row">
+              <span class="label">Cloud Tunnel:</span>
+              <span class="val highlight" id="statTunnelUrl">-</span>
+            </div>
+            <div class="stat-row">
+              <span class="label">Antigravity Agent:</span>
+              <span class="val" id="statAgentReady">Checking...</span>
+            </div>
+            <div class="stat-row">
+              <span class="label">Host Memory:</span>
+              <span class="val" id="statMem">-</span>
+            </div>
+            <div class="stat-actions">
+              <button class="btn btn-outline" id="copyUrlBtn">📋 Copy Link</button>
+              <button class="btn btn-outline" id="viewQrBtn">💻 Setup Guide</button>
+            </div>
+          </div>
+
+          <!-- Quick Terminal Runner -->
+          <div class="card">
+            <div class="card-title">⚡ Quick PowerShell Runner</div>
+            <p class="card-desc">Execute PowerShell commands on your Windows workstation directly from MacBook or iPhone.</p>
+            <div class="terminal-input-row">
+              <input type="text" id="terminalCmdInput" placeholder="e.g. git status, Get-Process node">
+              <button class="btn btn-primary" id="runCmdBtn">Run</button>
+            </div>
+            <pre id="terminalOutput" class="terminal-output">Ready for input...</pre>
+          </div>
+
+          <!-- Settings Card -->
+          <div class="card">
+            <div class="card-title">🔒 Security &amp; Session</div>
+            <div class="stat-row">
+              <span class="label">Device Auth:</span>
+              <span class="val" id="authStatusText">Authenticated</span>
+            </div>
+            <div class="stat-actions">
+              <button class="btn btn-danger" id="logoutBtn">Lock App (Clear PIN)</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Navigation Bar (iOS Tab Bar — hidden on MacBook desktop) -->
+    <nav class="tab-bar mobile-only">
+      <button class="tab-item active" data-tab="chatView">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        <span>Chat</span>
+      </button>
+      <button class="tab-item" data-tab="historyView">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span>History</span>
+      </button>
+      <button class="tab-item" data-tab="artifactsView">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        <span>Artifacts</span>
+      </button>
+      <button class="tab-item" data-tab="systemView">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        <span>System</span>
+      </button>
+    </nav>
+
+    <!-- Modals & Sheets -->
+
+    <!-- 1. New Conversation Modal -->
+    <div id="newConvoModal" class="modal-backdrop hidden">
+      <div class="modal-sheet">
+        <div class="sheet-handle mobile-only"></div>
+        <div class="modal-header">
+          <h3>New Antigravity Task</h3>
+          <button class="close-btn" id="closeNewConvoBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <label>Title (Optional):</label>
+          <input type="text" id="newConvoTitle" placeholder="e.g. Update CRM dashboard">
+          
+          <label>Initial Instruction / Goal:</label>
+          <textarea id="newConvoPrompt" rows="4" placeholder="What should Antigravity work on?"></textarea>
+
+          <label>Model Tier:</label>
+          <div class="model-selector model-selector-4">
+            <label class="model-option">
+              <input type="radio" name="modelTier" value="default" checked>
+              <div class="model-card">
+                <b>Default</b>
+                <span>Active PC model</span>
+              </div>
+            </label>
+            <label class="model-option">
+              <input type="radio" name="modelTier" value="pro">
+              <div class="model-card">
+                <b>Gemini Pro</b>
+                <span>Deep reasoning</span>
+              </div>
+            </label>
+            <label class="model-option">
+              <input type="radio" name="modelTier" value="flash">
+              <div class="model-card">
+                <b>Gemini Flash</b>
+                <span>Fast &amp; versatile</span>
+              </div>
+            </label>
+            <label class="model-option">
+              <input type="radio" name="modelTier" value="flash_lite">
+              <div class="model-card">
+                <b>Flash Lite</b>
+                <span>Quick lookups</span>
+              </div>
+            </label>
+          </div>
+
+          <button class="btn btn-primary btn-block" id="startConvoSubmitBtn">Start Task</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Artifact Viewer Modal -->
+    <div id="artifactModal" class="modal-backdrop hidden">
+      <div class="modal-sheet modal-sheet-full">
+        <div class="sheet-handle mobile-only"></div>
+        <div class="modal-header">
+          <h3 id="artifactTitle">Artifact</h3>
+          <button class="close-btn" id="closeArtifactBtn">&times;</button>
+        </div>
+        <div class="modal-body artifact-body" id="artifactContent">
+          <!-- Rendered Markdown -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Security PIN Lock Screen -->
+    <div id="pinLockModal" class="pin-modal-backdrop hidden">
+      <div class="pin-card">
+        <div class="pin-logo">🔒</div>
+        <h2>Unlock Antigravity</h2>
+        <p id="pinSubtitle">Enter your 4-digit workstation PIN</p>
+        
+        <div class="pin-dots" id="pinDots">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+
+        <div class="keypad">
+          <button class="key-btn" data-key="1">1</button>
+          <button class="key-btn" data-key="2">2</button>
+          <button class="key-btn" data-key="3">3</button>
+          <button class="key-btn" data-key="4">4</button>
+          <button class="key-btn" data-key="5">5</button>
+          <button class="key-btn" data-key="6">6</button>
+          <button class="key-btn" data-key="7">7</button>
+          <button class="key-btn" data-key="8">8</button>
+          <button class="key-btn" data-key="9">9</button>
+          <button class="key-btn empty"></button>
+          <button class="key-btn" data-key="0">0</button>
+          <button class="key-btn del" id="pinBackspaceBtn">⌫</button>
+        </div>
+
+        <div class="pin-kbd-hint desktop-only">Type 4 digits directly on your MacBook keyboard</div>
+        <div class="pin-error" id="pinError"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main JavaScript -->
+  <script src="./app.js"></script>
+</body>
+</html>
